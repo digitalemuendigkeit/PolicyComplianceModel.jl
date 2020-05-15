@@ -13,5 +13,5 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/sumidu/PolicyComplianceModel.jl",
+    repo="github.com/digitalemuendigkeit/PolicyComplianceModel.jl",
 )
