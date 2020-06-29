@@ -1,5 +1,7 @@
 using Agents
 using LightGraphs
+using DataFrames
+using CSV
 
 
 mutable struct Citizen <: AbstractAgent
@@ -87,17 +89,34 @@ end
 function share_newspost(agent, model, event)
 end
 
-
 # SIR model to be run in parallel
 
-c = Int64[
-    2 2 2;
-    2 2 2;
-    2 2 2
-]
-n = Int64[33, 33, 34]
+populations = CSV.read(joinpath("data", "uk_structure", "populations_metro_areas.csv"))
+populations = collect(populations["Populations"])
+
+# n = Int64[33, 33, 34]
+# c = Int64[
+#     2 2 2;
+#     2 2 2;
+#     2 2 2
+# ]
+
+n = [convert(Int64, i) for i in round.(populations ./ 1000)]
+c = ones(Float64, 75, 75)
+for i in 1:length(n)
+    for j in 1:length(n)
+        c[i, j] = (n[i] + n[j]) / sum(n)
+        c[j, i] = c[i, j]
+    end
+end
 
 space = GraphSpace(stochastic_block_model(c, n))
+
+using GraphPlot
+
+gplot(space.graph)
+
+# https://link.springer.com/article/10.1007/s41109-019-0170-z ?
 
 properties = Dict(
     "compliance" => 0.0,
