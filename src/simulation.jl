@@ -58,6 +58,8 @@ struct Event
 
 end
 
+# qualitative analysis -> sample of news posts -> category system
+
 function create_events(model)
     # non-complicance event:
         # subgraph of non-compliant agents
