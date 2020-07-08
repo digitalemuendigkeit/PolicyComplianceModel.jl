@@ -27,7 +27,13 @@ struct Event
     type::Symbol
 end
 
+<<<<<<< HEAD
 function create_events!(model)
+=======
+# qualitative analysis -> sample of news posts -> category system
+
+function create_events(model)
+>>>>>>> first-idea
     # non-complicance event:
         # subgraph of non-compliant agents
         # find biggest component
