@@ -2,6 +2,7 @@ using Agents
 using LightGraphs
 using DataFrames
 using CSV
+using Random
 
 
 mutable struct Citizen <: AbstractAgent
@@ -23,68 +24,107 @@ struct Event
     severity::Float64
     pos::Int64
     scope::Symbol  # :L -> local, :G -> global
-    type::String  # specify the levels somewhere
-
-    # severity
-    # proximity
-        # social proximity: event affects myself or my friends
-    # local / global
-        # somebody close gets infected
-
-    # event types:
-
-        # new policies / information
-            # travel restrictions
-            # open / close:
-                # schools / colleges / kindergartens
-                # shops / manufacturing / playgrounds / public transport / recreation facilities
-                # hospitals / physicians
-        # not adhering to policy -> consequences
-        # loosening / tightening of policies
-            # contingent on model state (e.g., number of infected -> threshold / range)
-
-        # beginning of a wave / outbreak
-            # report numbers (media)
-
-        # financial news / big company bankruptcy
-        # social topics relating to Corona
-
-        # potential remedy / vaccine
-
-        # panic / panic buying / "prepping" / irrational behavior
-        # organised protest
-
-    # analyse UK media coverage -> classify
-
+    type::Symbol
 end
 
-function create_events(model)
+function create_events!(model)
     # non-complicance event:
         # subgraph of non-compliant agents
         # find biggest component
         # greater than threshold?
             # find most central agent -> position of event
             # create the event
+    if rand() < 0.1
+        scope = bitrand()[1] ? :L : :G
+        push!(
+            model.events,
+            Event(rand(), rand(1:nv(model.space.graph)), scope, :non_compliance)
+        )
+    end
+
+    size(SimpleGraph(100))
 
     # remedy event:
         # if rand() < 0.01
             # create remedy event
+    if rand() < 0.01
+        scope = bitrand()[1] ? :L : :G
+        push!(
+            model.events,
+            Event(rand(), rand(1:nv(model.space.graph)), scope, :remedy)
+        )
+    end
+
 
     # outbreak event:
         # contingent on SIR model
+    if rand() < 0.1
+        scope = bitrand()[1] ? :L : :G
+        push!(
+            model.events,
+            Event(rand(), rand(1:nv(model.space.graph)), scope, :outbreak)
+        )
+    end
+    # socio-economic event:
+        # if rand() < 0.01
+            # create socio_economic event
+    if rand() < 0.1
+        scope = bitrand()[1] ? :L : :G
+        push!(
+            model.events,
+            Event(rand(), rand(1:nv(model.space.graph)), scope, :socio_economic)
+        )
+    end
+
+    # research event
+    # if rand() < 0.01
+        # create research event
+    if rand() < 0.1
+        scope = bitrand()[1] ? :L : :G
+        push!(
+            model.events,
+            Event(rand(), rand(1:nv(model.space.graph)), scope, :research)
+        )
+    end
+
+    # behavioral effects event:
+        # for n in nodes
+            # if n_agents > threshold:
+                # create beavhioral_effects event
+    if rand() < 0.1
+        scope = bitrand()[1] ? :L : :G
+        push!(
+            model.events,
+            Event(rand(), rand(1:nv(model.space.graph)), scope, :behavioral_effects)
+        )
+    end
 end
 
-struct Newspost
-    # event
-    # type of post (video / text)
-    # accuracy
-    # credibility
-    # bias / reporting bias
-    # sentiment / emotional loading
-    # news outlet / source
-    # date of publication
-    # view count / impact
+mutable struct Newspost
+    event::Event
+    accuracy::Float64
+    bias::Float64
+    sentiment::Float64
+    date::Int64
+    view_count::Int64
 end
+
+function create_newsposts!(model)
+    if length(model.events) > 10
+        range = 1:10
+    else
+        range = 1:length(model.events)
+    end
+    for e in model.events[range]
+        for i in 1:(ceil(Int64, 20 * e.severity))
+            push!(
+                model.newsposts,
+                Newspost(e, rand(), rand(), rand(), model.tick, 0),
+            )
+        end
+    end
+end
+
 
 function share_newspost(agent, model, event)
 end
@@ -112,18 +152,24 @@ end
 
 space = GraphSpace(stochastic_block_model(c, n))
 
-using GraphPlot
-
-gplot(space.graph)
+# using GraphPlot
+# gplot(space.graph)
 
 # https://link.springer.com/article/10.1007/s41109-019-0170-z ?
 
 properties = Dict(
-    "compliance" => 0.0,
-    "policy_ranges" => Dict(),  # policy => range
-    "hospital_capacity" => 1.0,  # initialize with realistic number
-    "policy_restrictiveness" => 0.0,
-    "event_thresholds" => Dict()
+    :compliance => 0.0,
+    :policy_ranges => Dict(),  # policy => range
+    :hospital_capacity => 1.0,  # initialize with realistic number
+    :policy_restrictiveness => 0.0,
+    :event_thresholds => Dict(),
+    :event_types => Symbol[
+        :outbreak, :non_compliance, :behavioral_effects,
+        :socio_economic, :remedy, :research
+    ],
+    :events => Event[],
+    :newsposts => Newspost[],
+    :tick => 0
 )
 
 model = AgentBasedModel(
@@ -138,10 +184,13 @@ for i in 1:100
         Citizen(
             i,
             i,
-            Int64[1, 1, 1, 1],
+            1,
             0.0,
-            Event[Event(), Event()],
-            Event[Event(), Event()],
+            Event[],
+            Event[],
+            0.0,
+            0.5,
+            0.0,
             0.0,
             false
         ),
@@ -157,7 +206,7 @@ function update_memory!()
     # update priorities
 end
 
-function agent_step!()
+function agent_step!(agent, model)
     # look at news feed
     # do sth with memory
     # factor in trust
@@ -167,6 +216,15 @@ function agent_step!()
     # --> outcome on comply
 end
 
-function model_step!()
+function model_step!(model)
+    create_events!(model)
+    create_newsposts!(model)
+    model.tick += 1
+    return model
     # count number of compliant agents
 end
+
+agent_df, model_df = run!(
+    model, agent_step!, model_step!, 100,
+    adata=[], mdata=[:events, :newsposts]
+)
