@@ -3,105 +3,130 @@ using LightGraphs
 using DataFrames
 using CSV
 using Random
+using Distributions
 
 
 mutable struct Citizen <: AbstractAgent
     id::Int64
     pos::Int64
-    opinions::Float64
-    trust::Float64
-    memory::AbstractArray  # priority queue / higher weight of events frequently reported on
+    opinions::Float64  # find distribution
     newsfeed::AbstractArray
-    perceived_threat::Float64
-    media_use::Float64
-    fear::Float64
-    risk_affinity::Float64
+    # trust::Float64  # trust in administration, find distribution
+    # memory::AbstractArray  # priority queue / higher weight of events frequently reported on
+    # perceived_threat::Float64
+    # media_use::Float64
+    # fear::Float64
+    # risk_affinity::Float64
     # frustration
-    comply::Bool
+    # comply::Bool
 end
 
+
 struct Event
-    severity::Float64
+    quality::Int64
     pos::Int64
     scope::Symbol  # :L -> local, :G -> global
     type::Symbol
 end
 
-<<<<<<< HEAD
 function create_events!(model)
-=======
-# qualitative analysis -> sample of news posts -> category system
-
-function create_events(model)
->>>>>>> first-idea
     # non-complicance event:
         # subgraph of non-compliant agents
         # find biggest component
         # greater than threshold?
             # find most central agent -> position of event
             # create the event
+    # triggered when a specified number of agents don't comply
+    # non-compliance event triggers reaction of authorities
+        # might backfire or not
+    # linked to behavioral_effects event
     if rand() < 0.1
         scope = bitrand()[1] ? :L : :G
         push!(
             model.events,
-            Event(rand(), rand(1:nv(model.space.graph)), scope, :non_compliance)
+            Event(bitrand()[1] ? -1 : 1, rand(1:nv(model.space.graph)), scope, :non_compliance)
         )
     end
 
-    size(SimpleGraph(100))
+    # outbreak event:
+        # contingent on SIR model
+    # contingent on non-compliance
+    # random: frequently at first, then more infrequently
+    if rand() < 0.1
+        scope = bitrand()[1] ? :L : :G
+        push!(
+            model.events,
+            Event(rand() * 2 - 1, rand(1:nv(model.space.graph)), scope, :outbreak)
+        )
+    end
+
+    # socio-economic event:
+        # if rand() < 0.01
+            # create socio_economic event
+    # severity contingent on number of agents it concerns
+    # linked with outbreak
+    # positive - negative continuum
+    # -> model variable (e.g., socio-economic norm)
+        # agents have thresholds for behaviors
+    if rand() < 0.1
+        scope = bitrand()[1] ? :L : :G
+        push!(
+            model.events,
+            Event(rand() * 2 - 1, rand(1:nv(model.space.graph)), scope, :socio_economic)
+        )
+    end
 
     # remedy event:
         # if rand() < 0.01
             # create remedy event
+    # phases medications go through
+    # mainly news on vaccine
+    # every two days -> new article on remedy (content varies though)
+    # dependence on overall threat level
     if rand() < 0.01
         scope = bitrand()[1] ? :L : :G
         push!(
             model.events,
-            Event(rand(), rand(1:nv(model.space.graph)), scope, :remedy)
+            Event(rand() * 2 - 1, rand(1:nv(model.space.graph)), scope, :remedy)
         )
     end
-
-
-    # outbreak event:
-        # contingent on SIR model
-    if rand() < 0.1
-        scope = bitrand()[1] ? :L : :G
-        push!(
-            model.events,
-            Event(rand(), rand(1:nv(model.space.graph)), scope, :outbreak)
-        )
-    end
-    # socio-economic event:
-        # if rand() < 0.01
-            # create socio_economic event
-    if rand() < 0.1
-        scope = bitrand()[1] ? :L : :G
-        push!(
-            model.events,
-            Event(rand(), rand(1:nv(model.space.graph)), scope, :socio_economic)
-        )
-    end
-
     # research event
     # if rand() < 0.01
         # create research event
+    # grouping research and remedy event?
+    # remedy = positive research event
+    # not directly affected by agents
+    # positive - negative scale
     if rand() < 0.1
         scope = bitrand()[1] ? :L : :G
         push!(
             model.events,
-            Event(rand(), rand(1:nv(model.space.graph)), scope, :research)
+            Event(rand() * 2 - 1, rand(1:nv(model.space.graph)), scope, :research)
         )
     end
 
     # behavioral effects event:
         # for n in nodes
             # if n_agents > threshold:
-                # create beavhioral_effects event
+                # create behavioral_effects event
+    # hamstering / bulk buying
+        # perceived risk + concern
+        # personality
+        # concern decreases with time
+        # media play a role
+    # protests
+        # conformist vs. non-conformist
+        # social norm
+        # compliance vs. non-compliance
+        # [0, 1]
+        # threshold for protests (influenced by disease numbers)
+            # low numbers + high restrictions
+        # dependent on personality
     if rand() < 0.1
         scope = bitrand()[1] ? :L : :G
         push!(
             model.events,
-            Event(rand(), rand(1:nv(model.space.graph)), scope, :behavioral_effects)
+            Event(rand() * 2 - 1, rand(1:nv(model.space.graph)), scope, :behavioral_effects)
         )
     end
 end
@@ -190,22 +215,15 @@ for i in 1:100
         Citizen(
             i,
             i,
-            1,
-            0.0,
-            Event[],
-            Event[],
-            0.0,
-            0.5,
-            0.0,
-            0.0,
-            false
+            randn(),
+            Newspost[]
         ),
         model
     )
 end
 
 function check_feed!(agent)
-    # change internal state according to feed
+
 end
 
 function update_memory!()
@@ -234,3 +252,5 @@ agent_df, model_df = run!(
     model, agent_step!, model_step!, 100,
     adata=[], mdata=[:events, :newsposts]
 )
+
+model_df[!, :events]
